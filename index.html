@@ -1,4 +1,25 @@
-<title>Порядовка печи</title>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Интерактивная порядовка небольшой отопительной печи 770×640×2020 мм: печь строится ряд за рядом в 3D, вид сверху каждого ряда, материалы и советы по кладке красного и шамотного кирпича.">
+<meta name="keywords" content="порядовка печи, отопительная печь, кладка печи, печь своими руками, порядовка, печь из кирпича, шамотный кирпич">
+<link rel="canonical" href="https://designerofinterior.github.io/pech/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="Печки-лавочки">
+<meta property="og:title" content="Порядовка отопительной печи 3×2,5 кирпича">
+<meta property="og:description" content="Печь строится ряд за рядом: крутите, листайте ряды, смотрите вид сверху.">
+<meta property="og:url" content="https://designerofinterior.github.io/pech/">
+<meta property="og:image" content="https://designerofinterior.github.io/pech/cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"HowTo","name":"Порядовка отопительной печи 3×2,5 кирпича","description":"Интерактивная порядовка небольшой отопительной печи 770×640×2020 мм: печь строится ряд за рядом в 3D, вид сверху каждого ряда, материалы и советы по кладке красного и шамотного кирпича.","inLanguage":"ru","url":"https://designerofinterior.github.io/pech/","image":"https://designerofinterior.github.io/pech/cover.png",
+ "supply":[{"@type":"HowToSupply","name":"Кирпич красный рядовой, 245 шт."},{"@type":"HowToSupply","name":"Кирпич красный угловой радиусный, 138 шт."},{"@type":"HowToSupply","name":"Кирпич шамотный, 70 шт."},{"@type":"HowToSupply","name":"Дверка топки до 420×420 мм"},{"@type":"HowToSupply","name":"Дверка поддувала 250×130 мм"},{"@type":"HowToSupply","name":"Дверка чистки 130×130 мм, 2 шт."},{"@type":"HowToSupply","name":"Решётка колосниковая 140×270 мм"},{"@type":"HowToSupply","name":"Задвижка дымохода 140×140 мм"}],
+ "step":[{"@type":"HowToStep","text":"Кладка печи по порядовке ряд за рядом, 39 рядов"}]}
+</script>
+<title>Порядовка отопительной печи 3×2,5 кирпича — 3D, ряд за рядом | Печки-лавочки</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -139,6 +160,16 @@ svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width:
 #bookmark.on .ico { color: var(--accent); }
 #bookmark.on .star path { fill: var(--accent); }
 #bookmark[disabled] { opacity: 0.55; cursor: default; }
+#bmList { position: relative; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: -6px; padding: 2px; }
+#bmList::-webkit-scrollbar { display: none; }
+#bmList[hidden] { display: none; }
+#bmList button {
+  flex: none; padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  font-variant-numeric: tabular-nums; display: inline-flex; gap: 6px; align-items: center;
+}
+#bmList button::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+#bmList button.cur { background: var(--accent); color: #fff; border-color: transparent; }
+#bmList button.cur::before { background: #fff; }
 
 /* ---------- top view + hint */
 #top {
@@ -198,6 +229,7 @@ svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width:
 #info .note { font-size: 14px; color: var(--muted); }
 #info .note li { margin: 4px 0; line-height: 1.5; }
 #info ul { margin: 0; padding-left: 20px; }
+#info td small { display: block; margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--muted); }
 
 /* ---------- phones: controls stacked at the bottom, top view small in the corner */
 @media (max-width: 720px) {
@@ -281,6 +313,7 @@ svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width:
         <span id="bmText">Добавить в закладки</span>
         <svg class="ico star" viewBox="0 0 24 24"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>
       </button>
+      <div id="bmList" aria-label="Закладки" hidden></div>
     </div>
 
     <section id="top" class="glass" aria-label="Вид сверху">
@@ -322,8 +355,9 @@ svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width:
       <section class="card glass">
         <h3>Материалы</h3>
         <table>
-          <tr><td>Кирпич красный</td><td class="n">350 шт.</td></tr>
-          <tr><td>Кирпич шамотный</td><td class="n">55 шт.</td></tr>
+          <tr><td>Кирпич красный рядовой</td><td class="n">245 шт.</td></tr>
+          <tr><td>Кирпич красный угловой радиусный</td><td class="n">138 шт.</td></tr>
+          <tr><td>Кирпич шамотный</td><td class="n">70 шт.</td></tr>
           <tr><td>Дверка топки, максимум 420 × 420 мм</td><td class="n">1 шт.</td></tr>
           <tr><td>Дверка поддувала 250 × 130 мм</td><td class="n">1 шт.</td></tr>
           <tr><td>Дверка чистки 130 × 130 мм</td><td class="n">2 шт.</td></tr>
@@ -626,6 +660,30 @@ let bookmarks = [];
 try { bookmarks = JSON.parse(localStorage.getItem('pech.bookmarks') || '[]').filter(Number.isInteger); } catch (e) { bookmarks = []; }
 function saveBookmarks() { try { localStorage.setItem('pech.bookmarks', JSON.stringify(bookmarks)); } catch (e) { /* storage off */ } }
 
+// chips under the bookmark button: tap = jump to that row
+let bmKey = '';
+function renderBookmarks() {
+  const key = bookmarks.join(',') + '|' + row;
+  if (key === bmKey) return;   // updateUI runs every frame while building
+  const list = $('bmList');
+  const changed = bmKey.split('|')[0] !== bookmarks.join(',');
+  bmKey = key;
+  list.hidden = bookmarks.length === 0;
+  if (changed) list.innerHTML = bookmarks.map(r => `<button type="button" class="glass" data-row="${r}">Ряд ${r}</button>`).join('');
+  list.querySelectorAll('button').forEach(b => b.classList.toggle('cur', +b.dataset.row === row));
+  const cur = list.querySelector('.cur');   // keep the current chip visible (scroll the strip only)
+  if (cur && (cur.offsetLeft < list.scrollLeft || cur.offsetLeft + cur.offsetWidth > list.scrollLeft + list.clientWidth)) {
+    list.scrollLeft = cur.offsetLeft - (list.clientWidth - cur.offsetWidth) / 2;
+  }
+  if (changed && isPhone()) layout();   // panel height changed
+}
+$('bmList').onclick = e => {
+  const b = e.target.closest('button[data-row]');
+  if (!b) return;
+  haptic();
+  goToRow(+b.dataset.row);
+};
+
 function updateUI() {
   redraw();
   if (!N) return;
@@ -642,6 +700,7 @@ function updateUI() {
   $('bookmark').classList.toggle('on', marked);
   $('bookmark').disabled = row === 0;
   $('bmText').textContent = marked ? 'Ряд в закладках' : 'Добавить в закладки';
+  renderBookmarks();
   $('playIcon').setAttribute('d', playing ? 'M9 5v14M15 5v14' : 'M7 4.5v15l12-7.5z');
   $('play').setAttribute('aria-label', playing ? 'Пауза' : 'Строить');
 }
