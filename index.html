@@ -1,0 +1,759 @@
+<title>Порядовка печи</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: full-screen 3D stove; glass controls float over it (left column on desktop, bottom stack on phones). */
+:root {
+  --bg-top: #f1ede8;
+  --bg-bottom: #d8d1c8;
+  --glass: rgba(251, 249, 246, 0.8);
+  --glass-edge: rgba(255, 255, 255, 0.75);
+  --ink: #1f1c1a;
+  --muted: #6d665f;
+  --accent: #c4623a;
+  --track: #d7d2cb;
+  --thumb: #ffffff;
+  --btn: rgba(31, 28, 26, 0.06);
+  --btn-hover: rgba(31, 28, 26, 0.12);
+  --shadow: rgba(60, 40, 25, 0.16);
+  --floor: #ebe6df;
+  --top-bg: #ece8e2;
+  --font: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-top: #2b2825; --bg-bottom: #161412;
+    --glass: rgba(40, 37, 34, 0.82); --glass-edge: rgba(255, 255, 255, 0.08);
+    --ink: #f2ede7; --muted: #a79e95; --accent: #e07c52; --track: #4b4641; --thumb: #f6f2ed;
+    --btn: rgba(255, 255, 255, 0.08); --btn-hover: rgba(255, 255, 255, 0.16); --shadow: rgba(0, 0, 0, 0.4);
+    --floor: #3b3733; --top-bg: #2f2c29;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg-top: #2b2825; --bg-bottom: #161412;
+  --glass: rgba(40, 37, 34, 0.82); --glass-edge: rgba(255, 255, 255, 0.08);
+  --ink: #f2ede7; --muted: #a79e95; --accent: #e07c52; --track: #4b4641; --thumb: #f6f2ed;
+  --btn: rgba(255, 255, 255, 0.08); --btn-hover: rgba(255, 255, 255, 0.16); --shadow: rgba(0, 0, 0, 0.4);
+  --floor: #3b3733; --top-bg: #2f2c29;
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg-bottom);
+  color: var(--ink);
+  font-family: var(--font);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+#app {
+  position: relative;
+  height: 100%;
+  background: radial-gradient(120% 90% at 50% 20%, var(--bg-top), var(--bg-bottom));
+  overflow: hidden;
+}
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+}
+#ui > * { pointer-events: auto; }
+
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  box-shadow: 0 10px 30px var(--shadow);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+}
+button:focus-visible, .seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- left column (desktop) */
+#left {
+  position: absolute;
+  top: 20px;
+  left: max(24px, env(safe-area-inset-left, 0px));
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#head { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+#title { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; text-wrap: balance; }
+.transport { display: flex; gap: 10px; }
+.transport button { width: 44px; height: 44px; border-radius: 50%; padding: 11px; }
+.transport button:hover { background: var(--btn); }
+#play { width: 48px; height: 48px; padding: 12px; }
+
+#panel { border-radius: 24px; padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+#panel hr { border: 0; height: 1px; background: var(--btn-hover); margin: 0; }
+.block { display: flex; flex-direction: column; gap: 10px; }
+.block-head { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 500; }
+.block-head .ico { width: 26px; height: 26px; flex: none; }
+.block-head span { flex: 1; }
+.block-head b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ctl { display: flex; align-items: center; gap: 10px; }
+.round { width: 38px; height: 38px; border-radius: 50%; background: var(--btn); padding: 10px; flex: none; }
+.round:hover { background: var(--btn-hover); }
+
+/* segmented slider: one segment per row / brick */
+.seg { position: relative; flex: 1; min-width: 0; height: 36px; cursor: pointer; touch-action: none; }
+.rail { position: absolute; left: 14px; right: 14px; top: 0; bottom: 0; }
+.segs { position: absolute; left: 0; right: 0; top: 50%; height: 10px; transform: translateY(-50%); display: flex; gap: 2px; }
+.segs i { flex: 1; border-radius: 5px; background: var(--track); transition: background-color 0.12s; }
+.segs i.on { background: var(--accent); }
+.segs.plain { background: var(--track); border-radius: 5px; }
+.segs.plain i { flex: none; background: var(--accent); }
+.marks i { position: absolute; top: 2px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--accent); }
+.thumb {
+  position: absolute; top: 50%; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--thumb); box-shadow: 0 2px 6px var(--shadow), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  transform: translate(-50%, -50%); pointer-events: none;
+}
+
+#bookmark {
+  border-radius: 22px; padding: 15px 22px; display: flex; align-items: center; gap: 14px;
+  font-size: 16px; font-weight: 500; text-align: left;
+}
+#bookmark .ico { width: 24px; height: 24px; flex: none; }
+#bookmark span { flex: 1; }
+#bookmark:hover { filter: brightness(1.03); }
+#bookmark.on .ico { color: var(--accent); }
+#bookmark.on .star path { fill: var(--accent); }
+#bookmark[disabled] { opacity: 0.55; cursor: default; }
+
+/* ---------- top view + hint */
+#top {
+  position: absolute; top: 20px; right: max(24px, env(safe-area-inset-right, 0px));
+  border-radius: 24px; padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px;
+}
+#top .label { font-size: 16px; font-weight: 500; }
+#topView { display: block; width: 240px; height: 240px; border-radius: 12px; }
+
+#hint {
+  position: absolute; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); right: max(24px, env(safe-area-inset-right, 0px));
+  border-radius: 40px; padding: 12px 20px; display: flex; align-items: center; gap: 12px;
+  font-size: 15px; color: var(--muted); pointer-events: none; transition: opacity 0.6s;
+}
+#hint .ico { width: 30px; height: 30px; color: var(--ink); }
+#hint.gone { opacity: 0; }
+
+#loading {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 18px; font-weight: 500; color: var(--muted); pointer-events: none;
+}
+#loading[hidden] { display: none; }
+
+/* ---------- phones: controls stacked at the bottom, top view small in the corner */
+@media (max-width: 720px) {
+  #left {
+    top: auto; left: 0; right: 0; width: auto;
+    bottom: 0;
+    padding: 0 max(12px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    gap: 8px;
+  }
+  #head { flex-direction: row; justify-content: space-between; padding: 0 6px; }
+  #title { font-size: 22px; }
+  .transport { gap: 4px; }
+  .transport button { width: 40px; height: 40px; padding: 10px; }
+  #play { width: 44px; height: 44px; padding: 11px; }
+  #panel { border-radius: 20px; padding: 12px 14px; gap: 10px; }
+  .block { gap: 4px; }
+  .block-head { font-size: 15px; gap: 10px; }
+  .block-head .ico { width: 22px; height: 22px; }
+  .round { width: 34px; height: 34px; padding: 9px; }
+  #bookmark { border-radius: 18px; padding: 11px 16px; font-size: 15px; }
+  #bookmark .ico { width: 21px; height: 21px; }
+  #top { top: 12px; right: max(12px, env(safe-area-inset-right, 0px)); border-radius: 16px; padding: 8px; gap: 6px; }
+  #top .label { font-size: 12px; text-align: center; }
+  #topView { width: 104px; height: 104px; border-radius: 8px; }
+  #hint { top: 14px; bottom: auto; left: max(12px, env(safe-area-inset-left, 0px)); right: auto; padding: 8px 14px; font-size: 13px; }
+  #hint .ico { width: 22px; height: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .segs i, #hint { transition: none; }
+}
+</style>
+
+<div id="app">
+  <canvas id="scene"></canvas>
+  <div id="ui">
+    <div id="left">
+      <header id="head">
+        <h1 id="title">Вся печь</h1>
+        <div class="transport">
+          <button id="prev" type="button" aria-label="Предыдущий ряд"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button id="play" type="button" aria-label="Строить"><svg viewBox="0 0 24 24"><path id="playIcon" d="M7 4.5v15l12-7.5z"/></svg></button>
+          <button id="next" type="button" aria-label="Следующий ряд"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </header>
+
+      <section id="panel" class="glass">
+        <div class="block">
+          <div class="block-head">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M12 3l9 4.8-9 4.8-9-4.8z"/><path d="M3 12.2l9 4.8 9-4.8"/><path d="M3 16.4l9 4.8 9-4.8"/></svg>
+            <span>Ряд</span><b id="rowVal">–</b>
+          </div>
+          <div class="ctl">
+            <button id="rowMinus" class="round" type="button" aria-label="Ряд назад"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+            <div id="rowSlider" class="seg" tabindex="0" role="slider" aria-label="Ряд"></div>
+            <button id="rowPlus" class="round" type="button" aria-label="Ряд вперёд"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg></button>
+          </div>
+        </div>
+        <hr>
+        <div class="block">
+          <div class="block-head">
+            <svg class="ico" viewBox="0 0 24 24" style="fill: currentColor; stroke: none"><rect x="2" y="4" width="9.5" height="4.6" rx="1"/><rect x="12.5" y="4" width="9.5" height="4.6" rx="1"/><rect x="2" y="9.7" width="4.2" height="4.6" rx="1"/><rect x="7.2" y="9.7" width="9.6" height="4.6" rx="1"/><rect x="17.8" y="9.7" width="4.2" height="4.6" rx="1"/><rect x="2" y="15.4" width="9.5" height="4.6" rx="1"/><rect x="12.5" y="15.4" width="9.5" height="4.6" rx="1"/></svg>
+            <span>Кирпич</span><b id="brickVal">–</b>
+          </div>
+          <div class="ctl">
+            <button id="brickMinus" class="round" type="button" aria-label="Кирпич назад"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+            <div id="brickSlider" class="seg" tabindex="0" role="slider" aria-label="Кирпич"></div>
+            <button id="brickPlus" class="round" type="button" aria-label="Кирпич вперёд"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg></button>
+          </div>
+        </div>
+      </section>
+
+      <button id="bookmark" class="glass" type="button">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M6.5 3.5h11v17l-5.5-4-5.5 4z"/></svg>
+        <span id="bmText">Добавить в закладки</span>
+        <svg class="ico star" viewBox="0 0 24 24"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>
+      </button>
+    </div>
+
+    <section id="top" class="glass" aria-label="Вид сверху">
+      <div class="label">Вид сверху</div>
+      <canvas id="topView"></canvas>
+    </section>
+
+    <div id="hint" class="glass">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 3.8v4.6h-4.6"/></svg>
+      <span id="hintText">Перетащите, чтобы вращать</span>
+    </div>
+
+    <div id="loading">Загружаем печь…</div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ---- timing, same as ue_bake_v5.py: a brick every 15 frames at 30 fps, falls for 8 frames from 80 cm
+const PER = 15 / 30;
+const DROP = 8 / 30;
+const LIFT = 0.8;          // m
+const SHADE_DEPTH = 0.4;   // top view: m below the highest surface drawn darkest
+
+const TYPES = {
+  brick:  { color: '#a8492e', rough: 0.86, metal: 0,   jitter: 0.06 },
+  shamot: { color: '#dcc196', rough: 0.9,  metal: 0,   jitter: 0.04 },
+  iron:   { color: '#2c2c2e', rough: 0.5,  metal: 0.7, jitter: 0 },
+};
+const typeOf = name => /shamot/i.test(name) ? 'shamot' : /iron/i.test(name) ? 'iron' : 'brick';
+
+const $ = id => document.getElementById(id);
+const token = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const isPhone = () => matchMedia('(max-width: 720px)').matches;
+
+// ---- Telegram Mini App: talk to the app directly, no SDK script needed
+const inTelegram = !!window.TelegramWebviewProxy || /tgWebApp/.test(location.hash);
+function tg(event, data = {}) {
+  if (!inTelegram) return;
+  try {
+    if (window.TelegramWebviewProxy) window.TelegramWebviewProxy.postEvent(event, JSON.stringify(data));
+    else if (window.external && 'notify' in window.external) window.external.notify(JSON.stringify({ eventType: event, eventData: data }));
+    else window.parent.postMessage(JSON.stringify({ eventType: event, eventData: data }), '*');
+  } catch (e) { /* not in Telegram after all */ }
+}
+tg('web_app_ready');
+tg('web_app_expand');
+tg('web_app_setup_swipe_behavior', { allow_vertical_swipe: false });   // swipes rotate the stove, not close the app
+const haptic = () => tg('web_app_trigger_haptic_feedback', { type: 'selection_change' });
+if ('ontouchstart' in window) $('hintText').textContent = 'Проведите пальцем, чтобы вращать';
+
+// ---- renderer, scene, lights
+const canvas = $('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.setClearColor(0x000000, 0);
+
+// top view has its own small canvas, so the glass panel does not blur it
+const topCanvas = $('topView');
+const topRenderer = new THREE.WebGLRenderer({ canvas: topCanvas, antialias: true });
+topRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+topRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+// draw only when something changes: idle page costs nothing
+let dirty = true;
+const redraw = () => { dirty = true; };
+
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 100);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
+controls.minPolarAngle = THREE.MathUtils.degToRad(8);
+
+const hemi = new THREE.HemisphereLight('#fff6ec', '#b8ab9e', 0.55);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff1df', 2.4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+
+// floor that fades into the background
+function fadeTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grd.addColorStop(0, '#fff');
+  grd.addColorStop(0.55, '#fff');
+  grd.addColorStop(1, '#000');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 256, 256);
+  return new THREE.CanvasTexture(c);
+}
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(1, 64),
+  new THREE.MeshStandardMaterial({ color: token('--floor'), roughness: 1, alphaMap: fadeTexture(), transparent: true, depthWrite: false })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// top view: orthographic camera, flat colors darkened by depth, dark brick outlines
+const topCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.05, 50);
+topCam.layers.enable(1);
+const topUniforms = { uTop: { value: 0 }, uDepth: { value: SHADE_DEPTH } };
+function topMaterial(color) {
+  return new THREE.ShaderMaterial({
+    uniforms: { ...topUniforms, uColor: { value: new THREE.Color(color) } },
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+    vertexShader: `varying float vY;
+      void main() { vec4 w = modelMatrix * vec4(position, 1.0); vY = w.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform vec3 uColor; uniform float uTop; uniform float uDepth; varying float vY;
+      void main() {
+        float s = 1.0 - clamp((uTop - vY) / uDepth, 0.0, 1.0) * 0.65;
+        gl_FragColor = vec4(uColor * s, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+}
+const topMats = Object.fromEntries(Object.entries(TYPES).map(([k, t]) => [k, topMaterial(t.color)]));
+const edgeMat = new THREE.LineBasicMaterial({ color: '#1b1714', transparent: true, opacity: 0.45 });
+
+// ---- stove data
+let bricks = [];       // sorted laying order
+let rowFirst = [];     // index of the first brick of each row (0-based row index)
+let rowCount = [];
+let R = 0, N = 0, END = 0;
+let stoveBox = new THREE.Box3();
+let center = new THREE.Vector3();
+
+const start = i => i * PER;
+const rowStart = r => start(rowFirst[r - 1]);
+const rowEnd = r => (r < R ? rowStart(r + 1) : END);
+function placedAt(t, r) {
+  let c = 0;
+  for (let j = 0; j < rowCount[r - 1]; j++) if (t >= start(rowFirst[r - 1] + j) + DROP - 1e-6) c++;
+  return c;
+}
+function rowAt(t) {
+  let r = 1;
+  for (let i = 1; i <= R; i++) if (rowStart(i) <= t + 1e-6) r = i;
+  return r;
+}
+
+// ---- playback state (mirrors the UE widget)
+let T = 0;             // seconds on the laying timeline
+let target = 0;
+let playing = false;
+let playAll = false;   // play button: keep building to the end, rows follow
+let row = 0;           // 0 = whole stove
+let placed = 0;
+
+function applyTime() {
+  let top = stoveBox.min.y;
+  for (let i = 0; i < N; i++) {
+    const b = bricks[i];
+    const dt = T - start(i);
+    if (dt < 0) { b.obj.visible = false; continue; }
+    b.obj.visible = true;
+    const p = Math.min(dt / DROP, 1);
+    b.obj.position.y = b.baseY + LIFT * (1 - p * p);
+    if (p >= 1) top = Math.max(top, b.topY);
+  }
+  topUniforms.uTop.value = top;
+}
+
+function playTo(from, to) {
+  if (from !== null) T = from;
+  target = to;
+  playing = T < to;
+}
+function goToRow(r) {
+  if (!N) return;
+  row = THREE.MathUtils.clamp(r, 1, R);
+  playAll = false;
+  playTo(rowStart(row), rowEnd(row));
+  placed = 0;
+  updateUI();
+}
+function showWhole() {
+  row = 0; playAll = false; playing = false; T = END;
+  updateUI();
+}
+function showBricks(k) {
+  if (!N) return;
+  if (row === 0) row = R;
+  playAll = false; playing = false;
+  k = THREE.MathUtils.clamp(k, 0, rowCount[row - 1]);
+  T = k === 0 ? rowStart(row) : start(rowFirst[row - 1] + k - 1) + DROP;
+  placed = k;
+  updateUI();
+}
+
+// ---- segmented slider
+function makeSlider(el, onChange) {
+  el.innerHTML = '<div class="rail"><div class="segs"></div><div class="marks"></div><div class="thumb"></div></div>';
+  const rail = el.querySelector('.rail'), segs = el.querySelector('.segs'), marks = el.querySelector('.marks'), thumb = el.querySelector('.thumb');
+  let steps = 1, min = 0, value = 0, drag = false, built = '', markKey = '';
+  function build() {
+    const plain = (rail.clientWidth - 2 * (steps - 1)) / steps < 4;   // too narrow for segments
+    const key = steps + (plain ? 'p' : 's');
+    if (key === built) return;
+    built = key;
+    segs.classList.toggle('plain', plain);
+    segs.innerHTML = plain ? '<i></i>' : '<i></i>'.repeat(steps);
+  }
+  function paint() {
+    build();
+    const f = value / steps;
+    if (segs.classList.contains('plain')) segs.firstChild.style.width = f * 100 + '%';
+    else [...segs.children].forEach((s, i) => s.classList.toggle('on', i < value));
+    thumb.style.left = f * 100 + '%';
+    el.setAttribute('aria-valuemin', min);
+    el.setAttribute('aria-valuemax', steps);
+    el.setAttribute('aria-valuenow', value);
+  }
+  const at = e => {
+    const r = rail.getBoundingClientRect();
+    return THREE.MathUtils.clamp(Math.round((e.clientX - r.left) / r.width * steps), min, steps);
+  };
+  el.addEventListener('pointerdown', e => {
+    drag = true;
+    el.setPointerCapture(e.pointerId);
+    value = at(e); paint(); onChange(value, false);
+  });
+  el.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const v = at(e);
+    if (v !== value) { value = v; paint(); haptic(); onChange(v, false); }
+  });
+  const end = () => { if (drag) { drag = false; onChange(value, true); } };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  el.addEventListener('keydown', e => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 0;
+    if (!d) return;
+    e.preventDefault();
+    onChange(THREE.MathUtils.clamp(value + d, min, steps), true);
+  });
+  return {
+    get dragging() { return drag; },
+    set(s, m, v) { steps = Math.max(s, 1); min = m; if (!drag) value = THREE.MathUtils.clamp(v, min, steps); paint(); },
+    marks(list) {
+      const key = list.join(',') + '/' + steps;
+      if (key === markKey) return;
+      markKey = key;
+      marks.innerHTML = list.filter(m => m >= 1 && m <= steps).map(m => `<i style="left:${(m - 0.5) / steps * 100}%"></i>`).join('');
+    },
+    repaint() { built = ''; paint(); },
+  };
+}
+
+const rowSlider = makeSlider($('rowSlider'), (r, released) => {
+  if (!N) return;
+  if (released) { goToRow(r); return; }
+  row = THREE.MathUtils.clamp(r, 1, R);   // while dragging: rows finished, no animation
+  showBricks(rowCount[row - 1]);
+});
+const brickSlider = makeSlider($('brickSlider'), k => showBricks(k));
+
+// ---- bookmarks (this device only)
+let bookmarks = [];
+try { bookmarks = JSON.parse(localStorage.getItem('pech.bookmarks') || '[]').filter(Number.isInteger); } catch (e) { bookmarks = []; }
+function saveBookmarks() { try { localStorage.setItem('pech.bookmarks', JSON.stringify(bookmarks)); } catch (e) { /* storage off */ } }
+
+function updateUI() {
+  redraw();
+  if (!N) return;
+  const shown = row > 0 ? row : R;
+  const total = rowCount[shown - 1];
+  if (row === 0) placed = total;
+  $('title').textContent = row === 0 ? 'Вся печь' : `Ряд ${row} / ${R}`;
+  $('rowVal').textContent = `${shown} / ${R}`;
+  $('brickVal').textContent = `${placed} / ${total}`;
+  rowSlider.set(R, 1, shown);
+  rowSlider.marks(bookmarks);
+  brickSlider.set(total, 0, placed);
+  const marked = row > 0 && bookmarks.includes(row);
+  $('bookmark').classList.toggle('on', marked);
+  $('bookmark').disabled = row === 0;
+  $('bmText').textContent = marked ? 'Ряд в закладках' : 'Добавить в закладки';
+  $('playIcon').setAttribute('d', playing ? 'M9 5v14M15 5v14' : 'M7 4.5v15l12-7.5z');
+  $('play').setAttribute('aria-label', playing ? 'Пауза' : 'Строить');
+}
+
+// ---- buttons
+const prevRow = () => goToRow(row === 0 ? R : Math.max(row - 1, 1));
+const nextRow = () => (row >= R ? showWhole() : goToRow(row + 1));
+$('prev').onclick = prevRow;
+$('next').onclick = nextRow;
+$('rowMinus').onclick = prevRow;
+$('rowPlus').onclick = nextRow;
+$('play').onclick = () => {
+  if (!N) return;
+  if (playing) { playing = false; playAll = false; updateUI(); return; }
+  if (row === 0 || (row === R && placed >= rowCount[R - 1])) { row = 1; T = rowStart(1); }
+  playTo(null, END);
+  playAll = true;
+  updateUI();
+};
+$('brickMinus').onclick = () => {
+  if (!N) return;
+  if (row === 0) { row = R; placed = rowCount[R - 1]; }
+  if (placed > 0) showBricks(placed - 1);
+  else if (row > 1) { row--; showBricks(rowCount[row - 1] - 1); }   // row start = previous row finished
+};
+$('brickPlus').onclick = () => {
+  if (!N || row === 0) return;
+  if (placed < rowCount[row - 1]) showBricks(placed + 1);
+  else if (row < R) { row++; showBricks(1); }
+};
+$('bookmark').onclick = () => {
+  if (row === 0) return;
+  bookmarks = bookmarks.includes(row) ? bookmarks.filter(r => r !== row) : [...bookmarks, row].sort((a, b) => a - b);
+  saveBookmarks();
+  haptic();
+  updateUI();
+};
+controls.addEventListener('start', () => $('hint').classList.add('gone'));
+
+// ---- framing: the stove sits in the free part of the screen, not under the panels
+let fitted = false;
+function layout() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  let x0 = 0, x1 = w, y0 = 0, y1 = h;
+  const left = $('left').getBoundingClientRect();
+  if (isPhone()) y1 = left.top;
+  else x0 = left.right;
+  const dx = (x0 + x1) / 2 - w / 2, dy = (y0 + y1) / 2 - h / 2;
+  camera.setViewOffset(w, h, -dx, -dy, w, h);
+  camera.updateProjectionMatrix();
+  rowSlider.repaint();
+  brickSlider.repaint();
+  redraw();
+  return { fw: (x1 - x0) / w, fh: (y1 - y0) / h };
+}
+function fitCamera(front) {
+  const { fw, fh } = layout();
+  const sphere = stoveBox.getBoundingSphere(new THREE.Sphere());
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dist = sphere.radius / Math.min(tanV * fh, tanV * camera.aspect * fw) * 1.08;
+  controls.target.copy(sphere.center);
+  // 3/4 view of the front, looking down 25 degrees
+  const dir = front.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(-35));
+  const pitch = THREE.MathUtils.degToRad(25);
+  camera.position.copy(sphere.center).addScaledVector(dir, dist * Math.cos(pitch)).add(new THREE.Vector3(0, dist * Math.sin(pitch), 0));
+  controls.minDistance = dist * 0.3;
+  controls.maxDistance = dist * 2.5;
+  controls.update();
+  fitted = true;
+}
+addEventListener('resize', () => { if (fitted) layout(); });
+
+// ---- theme follows the viewer
+function applyTheme() {
+  floor.material.color.set(token('--floor'));
+  topBg.set(token('--top-bg'));
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// ---- load the model (pech.glb; the preview host serves the same bytes as pech.wasm)
+function loadModel(urls, onLoad, onProgress, onError) {
+  new GLTFLoader().load(urls[0], onLoad, onProgress, e => (urls.length > 1 ? loadModel(urls.slice(1), onLoad, onProgress, onError) : onError(e)));
+}
+loadModel(['pech.glb', 'pech.wasm'], gltf => {
+  const root = gltf.scene;
+  scene.add(root);
+  root.updateMatrixWorld(true);
+  const box0 = new THREE.Box3().setFromObject(root);
+  const c0 = box0.getCenter(new THREE.Vector3());
+  root.position.set(-c0.x, -box0.min.y, -c0.z);     // stove base at the origin
+  root.updateMatrixWorld(true);
+  stoveBox.setFromObject(root);
+  stoveBox.getCenter(center);
+
+  const re = /^R(\d+)_K(\d+)/;
+  root.traverse(o => {
+    const m = re.exec(o.name);
+    if (m && !(o.parent && re.test(o.parent.name))) bricks.push({ obj: o, row: +m[1], k: +m[2], name: o.name });
+  });
+  bricks.sort((a, b) => a.row - b.row || a.k - b.k || a.name.localeCompare(b.name));
+  N = bricks.length;
+
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const ironSum = new THREE.Vector3();
+  let ironN = 0;
+  bricks.forEach(b => {
+    b.baseY = b.obj.position.y;
+    const bb = new THREE.Box3().setFromObject(b.obj);
+    b.topY = bb.max.y;
+    b.meshes = [];
+    b.obj.traverse(m => { if (m.isMesh) b.meshes.push(m); });
+    b.type = typeOf(b.meshes[0]?.material?.name || '');
+    if (b.type === 'iron') { ironSum.add(bb.getCenter(new THREE.Vector3())); ironN++; }
+    const t = TYPES[b.type];
+    const mat = new THREE.MeshStandardMaterial({ color: t.color, roughness: t.rough, metalness: t.metal, envMapIntensity: 0.5 });
+    if (t.jitter) mat.color.offsetHSL(0, 0, (rnd() - 0.5) * t.jitter * 2);
+    b.main = mat;
+    b.top = topMats[b.type];
+    b.meshes.forEach(m => {
+      m.material = mat;
+      m.castShadow = m.receiveShadow = true;
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 25), edgeMat);
+      edges.layers.set(1);   // outlines only in the top view
+      m.add(edges);
+    });
+  });
+
+  // rows
+  const rowNums = [...new Set(bricks.map(b => b.row))];
+  R = rowNums.length;
+  rowFirst = rowNums.map(r => bricks.findIndex(b => b.row === r));
+  rowCount = rowNums.map(r => bricks.filter(b => b.row === r).length);
+  END = N * PER + DROP;
+
+  // front = the side where the cast-iron doors are
+  let front = new THREE.Vector3(0, 0, 1);
+  if (ironN) {
+    const d = ironSum.divideScalar(ironN).sub(center);
+    front = Math.abs(d.x) > Math.abs(d.z) ? new THREE.Vector3(Math.sign(d.x), 0, 0) : new THREE.Vector3(0, 0, Math.sign(d.z) || 1);
+  }
+
+  // floor, light and top camera sized to the stove
+  const size = stoveBox.getSize(new THREE.Vector3());
+  const span = Math.max(size.x, size.z);
+  floor.scale.setScalar(Math.max(span * 6, size.y * 2.2));
+  const lightDir = front.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(40)).multiplyScalar(0.8).add(new THREE.Vector3(0, 1.2, 0)).normalize();
+  sun.position.copy(center).addScaledVector(lightDir, 8);
+  sun.target.position.copy(center);
+  const sc = sun.shadow.camera;
+  const ext = Math.max(size.y, span) * 1.2;
+  sc.left = sc.bottom = -ext; sc.right = sc.top = ext; sc.near = 0.5; sc.far = 20;
+  sc.updateProjectionMatrix();
+  const half = span / 2 * 1.15;
+  topCam.left = topCam.bottom = -half; topCam.right = topCam.top = half;
+  topCam.updateProjectionMatrix();
+
+  $('loading').hidden = true;
+  fitCamera(front);
+  showWhole();
+}, p => {
+  if (p.total) $('loading').textContent = `Загружаем печь… ${Math.round(p.loaded / p.total * 100)}%`;
+}, () => {
+  $('loading').textContent = 'Не удалось загрузить модель. Обновите страницу.';
+});
+
+// ---- top view render into the panel's square
+const topBg = new THREE.Color(token('--top-bg'));
+function renderTop() {
+  const w = topCanvas.clientWidth, h = topCanvas.clientHeight;
+  if (!w) return;
+  if (topCanvas.width !== Math.round(w * topRenderer.getPixelRatio())) topRenderer.setSize(w, h, false);
+  // image turns with the camera in quarter turns: the side facing you is at the bottom
+  const v = new THREE.Vector3().subVectors(controls.target, camera.position);
+  const a = Math.round(Math.atan2(v.x, v.z) / (Math.PI / 2)) * (Math.PI / 2);
+  topCam.up.set(Math.sin(a), 0, Math.cos(a));
+  topCam.position.set(center.x, stoveBox.max.y + 2, center.z);
+  topCam.lookAt(center.x, 0, center.z);
+
+  topRenderer.setClearColor(topBg, 1);
+  floor.visible = false;
+  const env = scene.environment;
+  scene.environment = null;            // belongs to the main renderer
+  bricks.forEach(b => b.meshes.forEach(m => { m.material = b.top; }));
+  topRenderer.render(scene, topCam);
+  bricks.forEach(b => b.meshes.forEach(m => { m.material = b.main; }));
+  scene.environment = env;
+  floor.visible = true;
+}
+
+// ---- main loop
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  if (playing) {
+    T = Math.min(T + dt, target);
+    if (T >= target) playing = false;
+    if (row > 0) {
+      if (playAll) row = rowAt(T);
+      placed = placedAt(T, row);
+    }
+    updateUI();
+  }
+  const moved = controls.update();
+  if (playing || moved || dirty) {
+    dirty = false;
+    if (N) applyTime();
+    renderer.render(scene, camera);
+    if (N) renderTop();
+  }
+  requestAnimationFrame(frame);
+}
+layout();
+requestAnimationFrame(frame);
+</script>
